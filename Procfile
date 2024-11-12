@@ -1,1 +1,1 @@
-"web: gunicorn -t 600 app:app" 
+web: gunicorn --workers 2 --timeout 600 app:app
