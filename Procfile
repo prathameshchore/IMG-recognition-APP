@@ -1,1 +1,1 @@
-"web: gunicorn app:app" 
+"web: gunicorn -t 600 app:app" 
