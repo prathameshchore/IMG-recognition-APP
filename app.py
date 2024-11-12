@@ -10,8 +10,8 @@ import requests
 from io import BytesIO
 import base64
 import dropbox
-
-
+# Set to CPU-only mode to avoid GPU issues if not supported
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 app = Flask(__name__)
 
 # Paths and settings
@@ -261,5 +261,6 @@ def match_object():
 
 if __name__ == '__main__':
     #os.makedirs(UPLOAD_DIR, exist_ok=True)
+    port = int(os.environ.get("PORT", 5000))  # Use Render-assigned port
     update_features()  # Ensure features are updated on startup
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=port)
