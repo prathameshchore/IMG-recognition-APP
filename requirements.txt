@@ -1,0 +1,9 @@
+tensorflow
+scikit-learn
+numpy
+dropbox
+python-dotenv
+Flask
+Flask-Cors
+requests 
+gunicorn
