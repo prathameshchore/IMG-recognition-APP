@@ -10,17 +10,20 @@ import requests
 from io import BytesIO
 import base64
 import dropbox
+from PIL import Image
+from dotenv import load_dotenv
+
 # Set to CPU-only mode to avoid GPU issues if not supported
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 app = Flask(__name__)
-
+load_dotenv()
 # Paths and settings
 #FEATURES_FILE = 'features.txt'  # File to store extracted features
 #UPLOAD_DIR = 'uploads/'  # Directory for uploaded images
 # Dropbox app credentials
-CLIENT_ID_DROPBOX = 'gp0ye9ejy3r3r0s'
-CLIENT_SECRET_DROPBOX = 'fdvg7iwy5cew0wl'
-REFRESH_TOKEN_DROPBOX = 'JdJe0bfnijsAAAAAAAAAATEBgB0GpzwOBjokHh9_rHGCSPm1KTuIHndm-4llllSk'
+CLIENT_ID_DROPBOX = os.getenv('CLIENT_ID_DROPBOX')
+CLIENT_SECRET_DROPBOX = os.getenv('CLIENT_SECRET_DROPBOX')
+REFRESH_TOKEN_DROPBOX = os.getenv('REFRESH_TOKEN_DROPBOX')
 # Dropbox settings
 
 FEATURES_FILE_PATH = '/Feature_Storage_Unit/features.txt'  # Path in Dropbox
@@ -28,10 +31,18 @@ FEATURES_FILE_PATH = '/Feature_Storage_Unit/features.txt'  # Path in Dropbox
 model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
 
 # Salesforce API credentials
-SALESFORCE_IMAGE_API = 'https://mahindramahindra-b-dev-ed.my.salesforce.com/services/apexrest/fetchImages'
-CLIENT_ID = '3MVG9pRzvMkjMb6lqs8UT9uhFGmrqU8JDxh2R_3hLI50P4mf5RTvTzcWL2ZZT4VD.vP.nAm_Ek9qBJfQHW5xe'
-CLIENT_SECRET = '84863F60FF1D91FDA52AF9C274B27958FD212293C20ED35F497A48655708A0F8'
-REFRESH_TOKEN = '5Aep861mdLLi91HqFdfdQRKfc05b2TZcwAD4xhhB7Mp9yxYzMWxE7XYPNMOzoPn_oDhvhKWm90qYSFHNlW7Qkci'
+SALESFORCE_IMAGE_API = os.getenv('SALESFORCE_IMAGE_API')
+CLIENT_ID = os.getenv('CLIENT_ID')
+CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+REFRESH_TOKEN = os.getenv('REFRESH_TOKEN')
+
+# Helper to resize images for lower memory use
+def resize_image(image_bytes, max_size=(224, 224)):
+    img = Image.open(BytesIO(image_bytes))
+    img.thumbnail(max_size)
+    img_byte_arr = BytesIO()
+    img.save(img_byte_arr, format=img.format)
+    return img_byte_arr.getvalue()
 
 def refresh_dropbox_access_token():
     global new_access_token_DBOX
@@ -181,7 +192,8 @@ def compute_and_save_features():
         base64_img = img_meta['imageData']
         
         # Decode the image and generate a new name
-        image_bytes = base64.b64decode(base64_img)
+        image_bytes = resize_image(base64.b64decode(base64_img)) 
+        
         renamed_image = f"{record_id}_{original_name}_{content_version_id}"
         
         # Extract and store features
@@ -212,7 +224,7 @@ def update_features():
         
         # If the image is new, extract and save its features
         if renamed_image not in features_data:
-            image_bytes = base64.b64decode(img_meta['imageData'])
+            image_bytes =resize_image(base64.b64decode(img_meta['imageData']))
             features_data[renamed_image] = extract_features_from_image_bytes(image_bytes).tolist()
 
     # Save updated features
@@ -261,6 +273,6 @@ def match_object():
 
 if __name__ == '__main__':
     #os.makedirs(UPLOAD_DIR, exist_ok=True)
-    port = int(os.environ.get("PORT", 5000))  # Use Render-assigned port
+    port = int(os.environ.get("PORT", 5000))
     update_features()  # Ensure features are updated on startup
     app.run(host='0.0.0.0', port=port)
